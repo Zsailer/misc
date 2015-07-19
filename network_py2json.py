@@ -10,15 +10,14 @@ def list_binary(length):
     """ List all binary strings with given length. """
     return sorted(["".join(seq) for seq in it.product("01", repeat=length)])
     
-
-def binary_neighbors(genotypes):
+def binary_neighbors(genotype):
     """ Returns binary genotypes that differ by a site in binary sequence space."""
-    dim = len(genotypes)
-    chars = list(genotypes)
+    dim = len(genotype)
+    chars = list(genotype)
 
     neighbors = list()
     for c in range(0,dim):
-        nb = list(genotypes)
+        nb = list(genotype)
         # Create a neighbor
         if chars[c] == '0':
             nb[c] = '1'
@@ -27,13 +26,14 @@ def binary_neighbors(genotypes):
         seq = "".join(nb)
         
         neighbors.append(seq)
+        
     return neighbors
 
 
 def binary_graph(n_sites):
     """ Generate a random binary network with 2**n_sites nodes. """
     sequences = list_binary(n_sites)
-    edges = binary_neighbors(sequences)
+    edges = [binary_neighbors(s) for s in sequences]
     
     # creates this data structure: nodes = {"<node_label>": value}
     vals = [round(np.random.rand(),2) for i in range(len(sequences))]
@@ -43,7 +43,7 @@ def binary_graph(n_sites):
     links = dict(zip(range(len(edges)), edges))
     
     # creates this data structure: edges_sizes = {index: (source_size, target_size)}
-    sizes = [(round(np.random.rand()), round(np.random.rand())) for i in range(len(links))]
+    sizes = [(round(np.random.rand(), 5), round(np.random.rand(), 5)) for i in range(len(links))]
     link_sizes = dict(zip(range(len(edges)), sizes))
     
     return nodes, links, link_sizes
