@@ -1,10 +1,15 @@
 # Python network generator for NetworkViewer 
 #
+# Requires numpy and networkx
+#
+
 from __future__ import absolute_import
 import numpy as np
 import argparse
 import sys
 import itertools as it
+import networkx as nx
+from networkx.readwrite import json_graph
 
 def list_binary(length):
     """ List all binary strings with given length. """
@@ -32,51 +37,47 @@ def binary_neighbors(genotype):
 
 def binary_graph(n_sites):
     """ Generate a random binary network with 2**n_sites nodes. """
+    
+    G = nx.Graph()
+    
+    # Add edges
     sequences = list_binary(n_sites)
-    edges = [binary_neighbors(s) for s in sequences]
+    edges = []
+    for s in sequences:
+        edges += [(s, n) for n in binary_neighbors(s)]
     
-    # creates this data structure: nodes = {"<node_label>": value}
-    vals = [round(np.random.rand(),2) for i in range(len(sequences))]
-    nodes = dict(zip(sequences, vals))
-    
-    # creates this data structure: edges = {index: (source, target)}
-    links = dict(zip(range(len(edges)), edges))
-    
-    # creates this data structure: edges_sizes = {index: (source_size, target_size)}
-    sizes = [(round(np.random.rand(), 5), round(np.random.rand(), 5)) for i in range(len(links))]
-    link_sizes = dict(zip(range(len(edges)), sizes))
-    
-    return nodes, links, link_sizes
-    
+    G.add_edges_from(edges)
+    # Add nodes
+    node2value = dict()
+    for i, seq in enumerate(G.nodes()):
+        value = round(np.random.rand(), 3)
+        G.node[seq]["name"] = i
+        G.node[seq]["value"] = value
+        node2value[seq] = value
+        
+    # Build edges
+    for edge in G.edges():
+        G.edge[edge[0]][edge[1]]["ssize"] = node2value[edge[0]]
+        G.edge[edge[0]][edge[1]]["tsize"] = node2value[edge[1]]
 
-def to_json(nodes, links, link_sizes, filename=None):
+    return G
+
+def to_json(G, filename=None):
     """ Take dictionary of nodes and edges and format for networkviewer. 
     
         nodes = {"<node_label>": value}
         edges = {index: (source, target)}
         edges_sizes = {index: (source_size, target_size)}
     """
-    full_dict = {"nodes":[], "links":[]}
-    
-    for n in nodes:
-        full_dict["nodes"].append({n:nodes[n]})
-    
-    # Build links
-    for i in links:
-        element = { "source": links[i][0], 
-                    "ssize": link_sizes[i][0],
-                    "target":links[i][1],
-                    "tsize": link_sizes[i][1]}
-                    
-        full_dict["links"].append(element)
+    s = json_graph.node_link_data(G)
         
     if filename is None:
-        return full_dict
+        return s
     else:
         import json
         with open(filename, 'w') as f:
-            json.dump(full_dict, f)
-
+            json.dump(s, f)
+            
 def main(argv=None):
     """ Run main script. """
     
@@ -90,8 +91,8 @@ def main(argv=None):
     
     args = parser.parse_args(argv[1:])
     
-    nodes, links, link_sizes = binary_graph(int(args.n_sites))
-    to_json(nodes, links, link_sizes, filename=args.filename)
+    G = binary_graph(int(args.n_sites))
+    to_json(G, filename=args.filename)
 
 if __name__ == "__main__":
     main()
